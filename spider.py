@@ -11,10 +11,10 @@ from urllib import parse
 ALLOWED_DATA_TYPES = ["text/html; charset=UTF-8", "text/html; charset=utf-8", "text/html;charset=utf-8", "text/html;charset=UTF-8"]
 
 class Spider:
-    def __init__(self):
+    def __init__(self, urls):
         """Notes: In all functions, tags and attributes can be single items or lists"""
         print("First Spider searching base url for links")
-        return Spider.return_all_links()
+        self.base_page_links = Spider.return_all_links(urls)
 
     @staticmethod
     def return_specified_text(url, text):
