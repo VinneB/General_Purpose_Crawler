@@ -4,6 +4,10 @@ from dull_functions import *
 import spider
 import os
 import os.path
+import threading
+from queue import Queue
+from time import sleep
+
 ROOT_PROJECT_DIR = "C:\\Users\\VinneB\\Documents\\Web_Crawlers\\"
 CONFIGS = ROOT_PROJECT_DIR + "configs.txt"
 if not os.path.isdir(ROOT_PROJECT_DIR):
@@ -48,18 +52,23 @@ class Project:
             #Formats Properly
         write_file(self.project_dir + "project.txt" + "{}\n{}\n".format(self.project_name, self.crawl_num), '')
 
-    def create_crawl_dir(self, urls, entire_domain=False):
+    def create_crawl_dir(self, urls, domain_search=False):
         crawl_dir = self.project_dir + "Crawl_{}\\".format(self.crawl_num)
         create_dir(crawl_dir)
-        if entire_domain == True:
+        if domain_search == True:
             for url in urls:
                 create_dir(crawl_dir + get_domain_name(url))
         else:
             for url in urls:
                 create_dir(crawl_dir + url)
+        return crawl_dir
 
     def text_crawl(self, urls, num_of_threads, specified_text, domain_search=False):
-        pass
+        crawl_dir = create_crawl_dir(urls, domain_search)
+        #Calls domain search to return a list of all webpages in the domain of the specified webpages.
+        if domain_search == True:
+            self.domain_search(urls, num_of_threads, crawl_dir)
+
 
     def link_crawl(self, urls, num_of_threads):
         pass
@@ -67,8 +76,21 @@ class Project:
     def custom_crawl(self, urls, num_of_threads, tags, attrs, domain_search):
         pass
 
-    def domain_search(self, urls, num_of_threads):
-        pass
+    def domain_search(self, urls, num_of_threads, crawl_dir):
+        crawled domains = list()
+        def save(save_file, auto_time, queue):
+            while True:
+                sleep(auto_time)
+                write_file
+
+        for url in urls:
+            #For the doimain of each website(if two websites share a domain it will only crawl once), it will place all the
+            #
+            domain_name = get_domain_name(url)
+            crawled = list()
+            crawl_queue           ]
+            crawl_queue = Queue()
+
 
     @staticmethod
     def load_project(path):
