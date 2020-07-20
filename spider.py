@@ -7,14 +7,15 @@ from urllib.request import urlopen
 import requests
 from threading import Thread
 from urllib import parse
+from dull_functions import remove_duplicates, get_domain_name
 
 ALLOWED_DATA_TYPES = ["text/html; charset=UTF-8", "text/html; charset=utf-8", "text/html;charset=utf-8", "text/html;charset=UTF-8"]
 
 class Spider:
-    def __init__(self, urls):
+    def __init__(self, url):
         """Notes: In all functions, tags and attributes can be single items or lists"""
         print("First Spider searching base url for links")
-        self.base_page_links = Spider.return_all_links(urls)
+        self.base_page_links = Spider.return_all_links(url)
 
     @staticmethod
     def return_specified_text(url, text):
@@ -27,7 +28,7 @@ class Spider:
             for text_instance in text:
                 if text_instance in tag.text:
                     return_tags.add(tag.text)
-        return return_tags
+        return remove_duplicates(return_tags)
 
     @staticmethod
     def return_specified_text_specific(url, text):
@@ -45,7 +46,7 @@ class Spider:
             for text_instance in text:
                 if text_instance not in return_tags[tag_text]:
                     return_tags.pop(tag_text)
-        return set(return_tags)
+        return remove_duplicates(return_tags)
 
 
     @staticmethod
@@ -58,7 +59,8 @@ class Spider:
         for tag in a_tags:
             if "/" in tag.get("href"):
                 links.add((tag.text, tag.get("href")))
-        return links
+
+        return remove_duplicates(links)
 
     @staticmethod
     def return_custom(url, search_tags, search_attributes=None):
@@ -80,7 +82,7 @@ class Spider:
                     if val in tag.get_attribute_list(attr):
                         return_tags.append(tag)
             return set(return_tags)
-        return set(accepted_tags)
+        return remove_duplicates(accepted_tags)
                         
 
     @staticmethod
@@ -96,3 +98,13 @@ class Spider:
         except:
             print("Error: Couldn't crawl {}".format(url))
             return ''
+
+    @staticmethod
+    def return_domain_links(url):
+        domain_links = list()
+        domain = get_domain_name(url)
+        links = Spider.return_all_links(url)
+        for link in links:
+            if domain in link:
+                domain_links.append(link[1])
+        return domain_links

@@ -59,7 +59,11 @@ def get_sub_domain_name(url):
 def get_domain_name(url):
     try:
         subdomain = get_sub_domain_name(url)
-        subdomain.split(".")
+        subdomain = subdomain.split(".")
         return subdomain[-2] + "." + subdomain[-1]
     except:
         return ''
+
+def remove_duplicates(item_list):
+    l = list(dict.fromkeys(item_list))
+    return l
