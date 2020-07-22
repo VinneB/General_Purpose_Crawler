@@ -9,13 +9,15 @@ from threading import Thread
 from urllib import parse
 from dull_functions import remove_duplicates, get_domain_name
 
-ALLOWED_DATA_TYPES = ["text/html; charset=UTF-8", "text/html; charset=utf-8", "text/html;charset=utf-8", "text/html;charset=UTF-8"]
+headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36 OPR/69.0.3686.77"}
+
+ALLOWED_DATA_TYPES = ["gzip", "text/html; charset=UTF-8", "text/html; charset=utf-8", "text/html;charset=utf-8", "text/html;charset=UTF-8"]
 
 class Spider:
     def __init__(self, url):
         """Notes: In all functions, tags and attributes can be single items or lists"""
         print("First Spider searching base url for links")
-        self.base_page_links = Spider.return_all_links(url)
+        self.base_page_links = Spider.return_domain_links(url)
 
     @staticmethod
     def return_specified_text(url, text):
@@ -57,6 +59,7 @@ class Spider:
         source = BeautifulSoup(Spider.get_raw_html(url), "lxml")
         a_tags = source.find_all("a")
         for tag in a_tags:
+            if tag.get("href") == None: continue
             if "/" in tag.get("href"):
                 links.add((tag.text, tag.get("href")))
 
@@ -90,7 +93,8 @@ class Spider:
         """Makes a get request to 'url'"""
         #Trys to get a response form website. If the response is in the ALLOWED_DATA_TYPES, then it returns the html
         try:
-            response = requests.get(url)
+            response = requests.get(url, headers=headers)
+            print(response.headers)
             if response.headers["Content-Type"] in ALLOWED_DATA_TYPES:
                 return response.text
             print("Error: Illegal file type")
@@ -104,7 +108,14 @@ class Spider:
         domain_links = list()
         domain = get_domain_name(url)
         links = Spider.return_all_links(url)
-        for link in links:
-            if domain in link:
-                domain_links.append(link[1])
+        try:
+            for link in links:
+                link = link[1]
+                link = parse.urljoin(domain, link)
+                if domain in link:
+                    domain_links.append(link)
+        except:
+            print("Error: Couldn't collect domain links")
+            return []
+        print("{} returned {} domain links.".format(url, len(domain_links)))
         return domain_links

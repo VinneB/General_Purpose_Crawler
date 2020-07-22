@@ -10,7 +10,7 @@ def write_file(file_path, data):
 
 def append_to_file(file_path, data):
     with open(file_path, 'a') as f:
-        f.write(data)
+        f.write(data + "\n")
 
 def delete_file_contents(file_path):
     with open(file_path, 'w') as f:
