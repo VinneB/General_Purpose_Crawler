@@ -8,6 +8,7 @@ import threading
 from queue import Queue
 from time import sleep
 
+NUM_OF_THREADS = 8
 SAVE_TIME = 30
 ROOT_PROJECT_DIR = "C:\\Users\\VinneB\\Documents\\Web_Crawlers\\"
 CONFIGS = ROOT_PROJECT_DIR + "configs.txt"
@@ -47,11 +48,10 @@ class Project:
         self.crawl_num = int(crawl_num)
         #Creating and formatting project directory
         print("Creating directory...")
-            #Creates Directory
         self.project_dir = ROOT_PROJECT_DIR + project_name + "[GPC]\\"
         create_dir(self.project_dir)
             #Formats Properly
-        write_file(self.project_dir + "project.txt" + "{}\n{}\n".format(self.project_name, self.crawl_num), '')
+        write_file(self.project_dir + "project.txt", "{}\n{}\n".format(self.project_name, self.crawl_num))
 
     def create_crawl_dir(self, urls, domain_search=False):
         crawl_dir = self.project_dir + "Crawl_{}\\".format(self.crawl_num)
@@ -65,94 +65,64 @@ class Project:
                 create_dir(crawl_dir + url)
         return crawl_dir
 
-    def text_crawl(self, urls, num_of_threads, specified_text, domain_search=False):
+    def text_crawl(self, urls, specified_text, domain_search=False):
         crawl_dir = self.create_crawl_dir(urls, domain_search)
         #Calls domain search to return a list of all webpages in the domain of the specified webpages.
         if domain_search == True:
-            self.domain_search(urls, num_of_threads, crawl_dir)
+            self.domain_search(urls, crawl_dir)
 
 
-    def link_crawl(self, urls, num_of_threads):
+    def link_crawl(self, urls):
         pass
 
-    def custom_crawl(self, urls, num_of_threads, tags, attrs, domain_search):
+    def custom_crawl(self, urls, tags, attrs, domain_search):
         pass
 
     @staticmethod
-    def domain_search(urls, num_of_threads, crawl_dir):
-        if isinstance(urls, str): urls = [urls]
+    def domain_search(base_urls, crawl_dir):
+        """For the domain of each website(if two websites share a domain it will only crawl once), it will place all the
+        crawled websites into 'crawled' which regurally gets saved into 'domain_websites.txt' inside the domain folder"""
+        if isinstance(base_urls, str): base_urls = [base_urls]
         crawled_domains = list()
-        save_lock = True
+        #Setups Save Thread
+        kill_save_threads = False
+        crawled = None
+        save_file = None
+        save_args = (crawled, save_file, kill_save_threads)
+        thread_setup(thread_save, 1, function_args=save_args)
         
-        def save():
-            """Functions which saves crawled data to save_file at an interval of 'SAVE_TIME' seconds"""
-            while True:
-                sleep(SAVE_TIME)
-                if not save_lock:
-                    print("Deleting {}(save_thread)".format(threading.current_thread().name))
-                    break
-                temp_container = list(crawled)
-                container_to_file(temp_container, save_file)
-                print("Crawl data saved to {}".format(save_file))
-
-        def crawl():
-            print("{} intialized.".format(threading.current_thread().name))
-            while True:
-                if not lock:
-                    "Deleting {}".format(threading.current_thread().name)
-                    break
-                initial_site = queue.get()
-                print("Crawling {}".format(initial_site))
-                links = Spider.return_domain_links(initial_site)
-                for link in links:
-                    if link in crawled:
-                        continue
-                    if link in crawl_queue:
-                        continue
-                    crawl_queue.add(link)
-                crawl_queue.remove(initial_site)
-                crawled.add(initial_site)
-                queue.task_done()
-                
-
-
-        for url in urls:
-            #For the domain of each website(if two websites share a domain it will only crawl once), it will place all the
-            #crawled websites into 'crawled' which regurally gets saved into 'domain_websites.txt' inside the domain folder
+        for base_url in base_urls:
             #NECESSARY VARS
-            lock = True
-            domain_name = get_domain_name(url)
+            domain_name = get_domain_name(base_url)
             #Ensures each domain is only crawled twice
             if domain_name in crawled_domains:
                 continue
             crawled = set()
-            crawl_queue = set()
+            crawl_queue = set(base_url)
             queue = Queue()
             save_file = crawl_dir + domain_name + "\\domain_websites.txt"
-            #Gathers links in url using Spider init function and adds them to crawl queue
-            initial_spider = Spider(url)
-            for url in initial_spider.base_page_links:
-                crawl_queue.add(url)
             #Create threads
-            save_t = threading.Thread(target=save)
-            save_t.daemon = True
-            save_t.start()
-            for _ in range(num_of_threads):
-                t = threading.Thread(target=crawl)
-                t.daemon = True
-                t.start()
+            kill_crawl_threads = False
+            crawl_args = (Spider.return_domain_links, queue, crawl_queue, crawled, kill_crawl_threads)
+            thread_setup(thread_crawl, NUM_OF_THREADS, function_args=crawl_args)
 
             #Updates queue
             while len(crawl_queue) > 0:
-                for url in crawl_queue:
-                    queue.put(url)
+                #This temp set doesn't allow the original set 'crawl_queue' to change length while being iterated
+                temp_crawl_queue = set(crawl_queue)
+                already_put = list()
+                for retrieved_url in temp_crawl_queue:
+                    if retrieved_url not in crawled and retrieved_url not in already_put:
+                        already_put.append(retrieved_url)
+                        queue.put(retrieved_url)
                 queue.join()
 
-            lock = False
-            print("Got here")
+            #Kills crawl threads when finished with this 'base_url' and saves final domain urls
+            kill_crawl_threads = True
             container_to_file(crawled, save_file)
 
-        save_lock = False
+        #Kills save_thread when function ends
+        kill_save_threads = True
 
 
     @staticmethod
@@ -160,5 +130,44 @@ class Project:
         pass
 
 
+#Crawling Functions
+def thread_setup(function, amount, function_args=None):
+    for _ in range(amount):
+        t = threading.Thread(target=function, daemon=True, args=function_args)
+        t.start()
+        print("Initialized {}".format(t.name))
 
-Project.domain_search(["https://www.disneyfoodblog.com", "https://pinchofyum.com"], 8, "C:\\Users\\VinneB\\Documents\\Scripts\\Python_Scripts\\Web_Applications\\General_Purpose_Crawler\\test\\")
+def thread_crawl(spider_function, retrieval_queue, entry_queue, finished_dump=None, kill_var=None):
+    while True:
+        if kill_var:
+            "Deleting {}".format(threading.current_thread().name)
+            break
+        retrieved_url = retrieval_queue.get()
+        print(retrieval_queue)
+        retrieved_data = spider_function(retrieved_url)
+        for data in retrieved_data:
+            #For Sets
+            try: entry_queue.add(data)
+            #For Lists/Tuples
+            except: entry_queue.append(data)
+        if finished_dump != None:
+            #For Sets
+            try: finished_dump.add(retrieved_url)
+            #For Lists/Tuples
+            except: finished_dump.append(retrieved_url)
+        
+        try: retrieval_queue.task_done()
+        except: pass
+
+def thread_save(save_data, save_file, kill_var=None):
+    """Functions which saves crawled data to save_file at an interval of 'SAVE_TIME' seconds"""
+    while True:
+        sleep(SAVE_TIME)
+        if kill_var:
+            print("Deleting {}(save_thread)".format(threading.current_thread().name))
+            break
+        temp_save_data = save_data
+        container_to_file(temp_save_data, save_file)
+        print("Crawl data saved to {}".format(save_file))
+
+Project.domain_search("https://pinchofyum.com", "C:\\Users\\VinneB\\Documents\\Scripts\\Python_Scripts\\Web_Applications\\General_Purpose_Crawler\\test\\")

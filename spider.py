@@ -16,8 +16,7 @@ ALLOWED_DATA_TYPES = ["gzip", "text/html; charset=UTF-8", "text/html; charset=ut
 class Spider:
     def __init__(self, url):
         """Notes: In all functions, tags and attributes can be single items or lists"""
-        print("First Spider searching base url for links")
-        self.base_page_links = Spider.return_domain_links(url)
+        pass
 
     @staticmethod
     def return_specified_text(url, text):
@@ -94,7 +93,6 @@ class Spider:
         #Trys to get a response form website. If the response is in the ALLOWED_DATA_TYPES, then it returns the html
         try:
             response = requests.get(url, headers=headers)
-            print(response.headers)
             if response.headers["Content-Type"] in ALLOWED_DATA_TYPES:
                 return response.text
             print("Error: Illegal file type")
