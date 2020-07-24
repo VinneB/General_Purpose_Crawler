@@ -110,6 +110,11 @@ class Spider:
             for link in links:
                 link = link[1]
                 link = parse.urljoin(domain, link)
+                #Prevents references to different locations in the same url though '#48585' tags
+                if "#" in link:
+                    link = link.split("#")
+                    link = link[0]
+                #Ensures every url is in the 'base_url' domain
                 if domain in link:
                     domain_links.append(link)
         except:

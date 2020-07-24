@@ -84,12 +84,8 @@ class Project:
         crawled websites into 'crawled' which regurally gets saved into 'domain_websites.txt' inside the domain folder"""
         if isinstance(base_urls, str): base_urls = [base_urls]
         crawled_domains = list()
-        #Setups Save Thread
-        kill_save_threads = False
-        crawled = None
-        save_file = None
-        save_args = (crawled, save_file, kill_save_threads)
-        thread_setup(thread_save, 1, function_args=save_args)
+        first_url = True
+        save_file = [crawl_dir, None, "\\domain_websites.txt"]
         
         for base_url in base_urls:
             #NECESSARY VARS
@@ -98,10 +94,17 @@ class Project:
             if domain_name in crawled_domains:
                 continue
             crawled = set()
-            crawl_queue = set(base_url)
+            crawl_queue = set([base_url])
             queue = Queue()
-            save_file = crawl_dir + domain_name + "\\domain_websites.txt"
+            #Updates the folder that the save thread is referencing
+            save_file[1] = domain_name
             #Create threads
+            if first_url:
+                #Creates a save thread which updates it's save_file to the appropriate url folder each 'base_urls' iteration
+                kill_save_threads = False
+                save_args = (crawled, save_file, kill_save_threads)
+                thread_setup(thread_save, 1, function_args=save_args)
+                first_url = False
             kill_crawl_threads = False
             crawl_args = (Spider.return_domain_links, queue, crawl_queue, crawled, kill_crawl_threads)
             thread_setup(thread_crawl, NUM_OF_THREADS, function_args=crawl_args)
@@ -143,7 +146,7 @@ def thread_crawl(spider_function, retrieval_queue, entry_queue, finished_dump=No
             "Deleting {}".format(threading.current_thread().name)
             break
         retrieved_url = retrieval_queue.get()
-        print(retrieval_queue)
+        print(retrieved_url)
         retrieved_data = spider_function(retrieved_url)
         for data in retrieved_data:
             #For Sets
@@ -166,8 +169,8 @@ def thread_save(save_data, save_file, kill_var=None):
         if kill_var:
             print("Deleting {}(save_thread)".format(threading.current_thread().name))
             break
-        temp_save_data = save_data
-        container_to_file(temp_save_data, save_file)
-        print("Crawl data saved to {}".format(save_file))
+        temp_save_data = set(save_data)
+        container_to_file(temp_save_data, "".join(save_file))
+        print("Crawl data saved to {}".format(save_file[1] + save_file[2]))
 
 Project.domain_search("https://pinchofyum.com", "C:\\Users\\VinneB\\Documents\\Scripts\\Python_Scripts\\Web_Applications\\General_Purpose_Crawler\\test\\")
