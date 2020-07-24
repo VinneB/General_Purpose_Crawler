@@ -29,6 +29,7 @@ class Spider:
             for text_instance in text:
                 if text_instance in tag.text:
                     return_tags.add(tag.text)
+        print("{} found {} text instances".format(url, len(return_tags)))
         return remove_duplicates(return_tags)
 
     @staticmethod

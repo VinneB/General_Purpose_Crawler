@@ -55,6 +55,7 @@ class Project:
 
     def create_crawl_dir(self, urls, domain_search=False):
         crawl_dir = self.project_dir + "Crawl_{}\\".format(self.crawl_num)
+        self.crawl_num +=1
         create_dir(crawl_dir)
         if domain_search == True:
             for url in urls:
@@ -65,11 +66,39 @@ class Project:
                 create_dir(crawl_dir + url)
         return crawl_dir
 
+
+class Crawler:
+    def __init__(self, project):
+        """This is the crawler which you use to call crawl urls"""
+        self.project = project
+
     def text_crawl(self, urls, specified_text, domain_search=False):
-        crawl_dir = self.create_crawl_dir(urls, domain_search)
+        crawl_dir = self.project.create_crawl_dir(urls, domain_search)
+        save_file = [crawl_dir, None, "\\text_data.txt"]
         #Calls domain search to return a list of all webpages in the domain of the specified webpages.
-        if domain_search == True:
+        if domain_search:
             self.domain_search(urls, crawl_dir)
+            urls = [get_domain_name(url) for url in urls]
+        for url in urls:
+            #NECESSARY VARS
+            save_file[1] = url
+            #Only exist if website has had it's domain searched
+            domain_websites_file = crawl_dir + url + "\\domain_websites.txt"
+            text_data_set = set()
+            queue = Queue()
+            kill_crawl_threads = False
+            kill_save_threads = False
+            if os.path.isfile(domain_websites_file):
+                #Setup Threads
+                thread_setup(thread_crawl, NUM_OF_THREADS, (Spider.return_specified_text, queue, text_data_set, None, kill_crawl_threads))
+                thread_setup(thread_save, 1, (text_data_set, save_file, kill_save_threads))
+                #Add urls from domain_websites to queue and begin crawling
+                queue.put(file_to_set(domain_websites_file))
+                queue.join()
+                container_to_file(text_data_set, save_file)
+            else:
+                text_data_set = Spider.return_specified_text(url, specified_text)
+                container_to_file(text_data_set, save_file)
 
 
     def link_crawl(self, urls):
@@ -173,4 +202,5 @@ def thread_save(save_data, save_file, kill_var=None):
         container_to_file(temp_save_data, "".join(save_file))
         print("Crawl data saved to {}".format(save_file[1] + save_file[2]))
 
-Project.domain_search("https://pinchofyum.com", "C:\\Users\\VinneB\\Documents\\Scripts\\Python_Scripts\\Web_Applications\\General_Purpose_Crawler\\test\\")
+crawler = Crawler(Project("Test Project"))
+crawler.text_crawl("ilovetypography.com", "Gutenberg", True)
