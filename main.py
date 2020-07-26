@@ -73,6 +73,8 @@ class Crawler:
         self.project = project
 
     def text_crawl(self, urls, specified_text, domain_search=False):
+        if isinstance(urls, str):
+            urls = [urls]
         crawl_dir = self.project.create_crawl_dir(urls, domain_search)
         save_file = [crawl_dir, None, "\\text_data.txt"]
         #Calls domain search to return a list of all webpages in the domain of the specified webpages.
@@ -147,11 +149,13 @@ class Crawler:
                     if retrieved_url not in crawled and retrieved_url not in already_put:
                         already_put.append(retrieved_url)
                         queue.put(retrieved_url)
+                crawl_queue = set()
                 queue.join()
+                print("Finished: Queue.join")
 
             #Kills crawl threads when finished with this 'base_url' and saves final domain urls
             kill_crawl_threads = True
-            container_to_file(crawled, save_file)
+            container_to_file(crawled, "".join(save_file))
 
         #Kills save_thread when function ends
         kill_save_threads = True
@@ -175,7 +179,6 @@ def thread_crawl(spider_function, retrieval_queue, entry_queue, finished_dump=No
             "Deleting {}".format(threading.current_thread().name)
             break
         retrieved_url = retrieval_queue.get()
-        print(retrieved_url)
         retrieved_data = spider_function(retrieved_url)
         for data in retrieved_data:
             #For Sets
@@ -187,7 +190,7 @@ def thread_crawl(spider_function, retrieval_queue, entry_queue, finished_dump=No
             try: finished_dump.add(retrieved_url)
             #For Lists/Tuples
             except: finished_dump.append(retrieved_url)
-        
+        print("queue: {}".format(list(retrieval_queue.queue)))
         try: retrieval_queue.task_done()
         except: pass
 
@@ -201,6 +204,7 @@ def thread_save(save_data, save_file, kill_var=None):
         temp_save_data = set(save_data)
         container_to_file(temp_save_data, "".join(save_file))
         print("Crawl data saved to {}".format(save_file[1] + save_file[2]))
+        print("Crawl_queue: {}".format(save_data))
 
 crawler = Crawler(Project("Test Project"))
-crawler.text_crawl("ilovetypography.com", "Gutenberg", True)
+crawler.text_crawl("https://ilovetypography.com", "Gutenberg", True)
