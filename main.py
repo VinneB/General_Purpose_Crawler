@@ -92,7 +92,7 @@ class Crawler:
             kill_save_threads = False
             if os.path.isfile(domain_websites_file):
                 #Setup Threads
-                thread_setup(thread_crawl, NUM_OF_THREADS, (Spider.return_specified_text, queue, text_data_set, None, kill_crawl_threads))
+                thread_setup(thread_crawl, NUM_OF_THREADS, (Spider.return_specified_text, queue, text_data_set, None, kill_crawl_threads, specified_text))
                 thread_setup(thread_save, 1, (text_data_set, save_file, kill_save_threads))
                 #Add urls from domain_websites to queue and begin crawling
                 queue.put(file_to_set(domain_websites_file))
@@ -141,7 +141,7 @@ class Crawler:
             thread_setup(thread_crawl, NUM_OF_THREADS, function_args=crawl_args)
 
             #Updates queue
-            while len(crawl_queue) > 0:
+            while True:
                 #This temp set doesn't allow the original set 'crawl_queue' to change length while being iterated
                 temp_crawl_queue = set(crawl_queue)
                 already_put = list()
@@ -149,9 +149,10 @@ class Crawler:
                     if retrieved_url not in crawled and retrieved_url not in already_put:
                         already_put.append(retrieved_url)
                         queue.put(retrieved_url)
-                crawl_queue = set()
+                    crawl_queue.remove(retrieved_url)
+                if queue.empty():
+                    break
                 queue.join()
-                print("Finished: Queue.join")
 
             #Kills crawl threads when finished with this 'base_url' and saves final domain urls
             kill_crawl_threads = True
@@ -173,13 +174,16 @@ def thread_setup(function, amount, function_args=None):
         t.start()
         print("Initialized {}".format(t.name))
 
-def thread_crawl(spider_function, retrieval_queue, entry_queue, finished_dump=None, kill_var=None):
+def thread_crawl(spider_function, retrieval_queue, entry_queue, finished_dump=None, kill_var=None, text_or_attrs=None):
     while True:
         if kill_var:
-            "Deleting {}".format(threading.current_thread().name)
+            print("Deleting {}".format(threading.current_thread().name))
             break
         retrieved_url = retrieval_queue.get()
-        retrieved_data = spider_function(retrieved_url)
+        if text_or_attrs is None:
+            retrieved_data = spider_function(retrieved_url)
+        else:
+            retrieved_data = spider_function(retrieved_url, text_or_attrs)
         for data in retrieved_data:
             #For Sets
             try: entry_queue.add(data)
@@ -190,7 +194,7 @@ def thread_crawl(spider_function, retrieval_queue, entry_queue, finished_dump=No
             try: finished_dump.add(retrieved_url)
             #For Lists/Tuples
             except: finished_dump.append(retrieved_url)
-        print("queue: {}".format(list(retrieval_queue.queue)))
+        print("queue length: {}".format(len(list(retrieval_queue.queue))))
         try: retrieval_queue.task_done()
         except: pass
 
@@ -207,4 +211,4 @@ def thread_save(save_data, save_file, kill_var=None):
         print("Crawl_queue: {}".format(save_data))
 
 crawler = Crawler(Project("Test Project"))
-crawler.text_crawl("https://ilovetypography.com", "Gutenberg", True)
+crawler.text_crawl("https://ilovetypography.com", "press", True)

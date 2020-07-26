@@ -11,7 +11,7 @@ from dull_functions import remove_duplicates, get_domain_name
 
 headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36 OPR/69.0.3686.77"}
 
-ALLOWED_DATA_TYPES = ["gzip", "text/html; charset=UTF-8", "text/html; charset=utf-8", "text/html;charset=utf-8", "text/html;charset=UTF-8"]
+ALLOWED_DATA_TYPES = ["gzip", "text/html; charset=UTF-8", "text/html; charset=utf-8", "text/html;charset=utf-8", "text/html;charset=UTF-8", "text/html"]
 
 class Spider:
     def __init__(self, url):
@@ -110,7 +110,7 @@ class Spider:
         try:
             for link in links:
                 link = link[1]
-                link = parse.urljoin(domain, link)
+                link = parse.urljoin(url, link)
                 #Prevents references to different locations in the same url though '#48585' tags
                 if "#" in link:
                     link = link.split("#")

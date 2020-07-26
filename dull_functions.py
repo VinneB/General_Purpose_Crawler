@@ -64,6 +64,7 @@ def get_domain_name(url):
     except:
         return ''
 
+
 def remove_duplicates(item_list):
     l = list(dict.fromkeys(item_list))
     return l
